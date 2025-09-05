@@ -1,1 +1,33 @@
+name: Minecraft Server
+on: workflow_dispatch
 
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup VPS
+        run: |
+          sudo apt update && sudo apt install -y openjdk-21-jdk wget screen openssh-server
+          sudo service ssh start
+          sudo useradd -m runner
+          echo 'runner:password123' | sudo chpasswd
+          echo "PermitRootLogin yes" | sudo tee -a /etc/ssh/sshd_config
+          echo "PasswordAuthentication yes" | sudo tee -a /etc/ssh/sshd_config
+          sudo service ssh restart
+
+      - name: Setup Ngrok
+        run: |
+          curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc > /dev/null
+          echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
+          sudo apt update && sudo apt install -y ngrok jq
+          ngrok config add-authtoken 32HDtXC6HS2NwG4kyBREEPcMq4T_3z2WPeFy4ooPw35fuXQii
+          nohup ngrok tcp 22 &
+          sleep 10
+          echo "SSH Address:"
+          curl -s http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[0].public_url'
+
+      - name: Download PaperMC 1.21.4
+        run: |
+          mkdir -p ~/minecraft && cd ~/minecraft
+          wget https://papermc.io/api/v2/projects/paper/versions/1.21.4/builds/1/downloads/paper-1.21.4-1.jar -O paper.jar
+          echo "eula=true" > eula.txt
