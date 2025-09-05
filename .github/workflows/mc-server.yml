@@ -1,39 +1,44 @@
 name: Minecraft Server
 
 on:
-  workflow_dispatch:   # <- isse manually "Run workflow" button aa jayega
+  workflow_dispatch:   # 👈 isse tu manually run kar paayega
+  push:
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Setup Java
-      uses: actions/setup-java@v2
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+      - name: Checkout
+        uses: actions/checkout@v2
 
-    - name: Download PaperMC
-      run: |
-        mkdir server
-        cd server
-        curl -o paper.jar https://api.papermc.io/v2/projects/paper/versions/1.21.4/builds/50/downloads/paper-1.21.4-50.jar
-        echo "eula=true" > eula.txt
+      - name: Set up JDK 17
+        uses: actions/setup-java@v2
+        with:
+          distribution: temurin
+          java-version: 17
 
-    - name: Start ngrok tunnel
-      run: |
-        curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | \
-        sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
-        echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | \
-        sudo tee /etc/apt/sources.list.d/ngrok.list
-        sudo apt update && sudo apt install ngrok -y
-        ngrok config add-authtoken ${{ secrets.NGROK_TOKEN }}
-        nohup ngrok tcp 25565 --region in &
+      - name: Download Paper 1.21.4
+        run: |
+          mkdir server
+          cd server
+          curl -o paperclip.jar https://api.papermc.io/v2/projects/paper/versions/1.21.4/builds/32/downloads/paper-1.21.4-32.jar
 
-    - name: Run Minecraft Server
-      run: |
-        cd server
-        nohup java -Xmx2G -Xms1G -jar paper.jar nogui &
-        sleep 30
-        echo "Server Started!"
+      - name: Accept EULA
+        run: |
+          echo "eula=true" > server/eula.txt
+
+      - name: Start Server
+        run: |
+          cd server
+          java -Xmx2G -Xms1G -jar paperclip.jar nogui &
+
+      - name: Start Ngrok
+        run: |
+          curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
+          echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
+          sudo apt update && sudo apt install ngrok -y
+          ngrok config add-authtoken ${{ secrets.NGROK_TOKEN }}
+          ngrok tcp 25565
